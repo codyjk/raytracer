@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "os"
 
 func main() {
 	// Image dimensions
@@ -11,6 +12,7 @@ func main() {
 	fmt.Printf("P3\n%d %d\n255\n", imageWidth, imageHeight)
 
 	for j := 0; j < imageHeight; j++ {
+		fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d", imageHeight-j)
 		for i := 0; i < imageWidth; i++ {
 			r := float64(i) / float64(imageWidth-1)
 			g := float64(j) / float64(imageHeight-1)
@@ -23,4 +25,6 @@ func main() {
 			fmt.Printf("%d %d %d\n", ir, ig, ib)
 		}
 	}
+
+	fmt.Fprintln(os.Stderr, "\nDone.")
 }

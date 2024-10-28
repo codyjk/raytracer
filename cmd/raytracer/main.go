@@ -11,17 +11,18 @@ import (
 
 // This math solves for the ray-sphere intersection. The math is explained here:
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection
+// https://raytracing.github.io/books/RayTracingInOneWeekend.html#surfacenormalsandmultipleobjects/simplifyingtheray-sphereintersectioncode
 func hitSphere(center vector.Point3, radius float64, r ray.Ray) float64 {
 	oc := center.Sub(r.Origin())
-	a := vector.Dot(r.Direction(), r.Direction())
-	b := -2.0 * vector.Dot(r.Direction(), oc)
-	c := vector.Dot(oc, oc) - radius*radius
-	discriminant := b*b - 4*a*c
+	a := r.Direction().LengthSquared()
+	h := vector.Dot(r.Direction(), oc)
+	c := oc.LengthSquared() - radius*radius
+	discriminant := h*h - a*c
 
 	if discriminant < 0 {
 		return -1.0
 	} else {
-		return (-b - math.Sqrt(discriminant)) / (2.0 * a)
+		return (h - math.Sqrt(discriminant)) / a
 	}
 }
 

@@ -10,12 +10,15 @@ type Vec3 struct {
 	e [3]float64
 }
 
-// An aliast for `Vec3`, used for geometric clarity.
-type Point3 = Vec3
-
-// Initializes a new `Vec3`.
 func NewVec3(e0, e1, e2 float64) Vec3 {
 	return Vec3{e: [3]float64{e0, e1, e2}}
+}
+
+// An alias for Vec3, used for geometric clarity.
+type Point3 = Vec3
+
+func NewPoint3(e0, e1, e2 float64) Point3 {
+	return Point3{e: [3]float64{e0, e1, e2}}
 }
 
 func ZeroVec3() Vec3 {

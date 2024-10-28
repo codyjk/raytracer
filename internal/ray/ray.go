@@ -7,6 +7,10 @@ type Ray struct {
 	direction vector.Vec3
 }
 
+func NewRay(origin vector.Point3, diretion vector.Vec3) Ray {
+	return Ray{origin, diretion}
+}
+
 func (r Ray) Origin() vector.Point3 {
 	return r.origin
 }

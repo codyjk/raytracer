@@ -8,10 +8,24 @@ import (
 	"raytracer/internal/vector"
 )
 
+// This math solves for the ray-sphere intersection. The math is explained here:
+// https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection
+func hitSphere(center vector.Point3, radius float64, r ray.Ray) bool {
+	oc := center.Sub(r.Origin())
+	a := vector.Dot(r.Direction(), r.Direction())
+	b := -2.0 * vector.Dot(r.Direction(), oc)
+	c := vector.Dot(oc, oc) - radius*radius
+	discriminant := b*b - 4*a*c
+	return discriminant >= 0
+}
+
 // We are rendering a horizontal greadient.
 // blendedValue = (1 - a) * startValue + a * endValue, where a is the linear
 // scale of the ray direction.
 func rayColor(r ray.Ray) color.Color {
+	if hitSphere(vector.NewPoint3(0, 0, -1), 0.5, r) {
+		return color.NewColor(1, 0, 0)
+	}
 	unitDirection := r.Direction().Unit()
 	a := 0.5 * (unitDirection.Y() + 1.0)
 	return color.NewColor(1.0, 1.0, 1.0).Scale(1.0 - a).Add(color.NewColor(0.5, 0.7, 1.0).Scale(a))

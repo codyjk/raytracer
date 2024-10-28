@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"raytracer/internal/color"
 	"raytracer/internal/ray"
@@ -10,22 +11,31 @@ import (
 
 // This math solves for the ray-sphere intersection. The math is explained here:
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection
-func hitSphere(center vector.Point3, radius float64, r ray.Ray) bool {
+func hitSphere(center vector.Point3, radius float64, r ray.Ray) float64 {
 	oc := center.Sub(r.Origin())
 	a := vector.Dot(r.Direction(), r.Direction())
 	b := -2.0 * vector.Dot(r.Direction(), oc)
 	c := vector.Dot(oc, oc) - radius*radius
 	discriminant := b*b - 4*a*c
-	return discriminant >= 0
+
+	if discriminant < 0 {
+		return -1.0
+	} else {
+		return (-b - math.Sqrt(discriminant)) / (2.0 * a)
+	}
 }
 
 // We are rendering a horizontal greadient.
 // blendedValue = (1 - a) * startValue + a * endValue, where a is the linear
 // scale of the ray direction.
 func rayColor(r ray.Ray) color.Color {
-	if hitSphere(vector.NewPoint3(0, 0, -1), 0.5, r) {
-		return color.NewColor(1, 0, 0)
+	sphereCenter := vector.NewPoint3(0, 0, -1)
+	t := hitSphere(sphereCenter, 0.5, r)
+	if t > 0.0 {
+		N := r.At(t).Sub(sphereCenter).Unit()
+		return color.NewColor(N.X()+1, N.Y()+1, N.Z()+1).Scale(0.5)
 	}
+
 	unitDirection := r.Direction().Unit()
 	a := 0.5 * (unitDirection.Y() + 1.0)
 	return color.NewColor(1.0, 1.0, 1.0).Scale(1.0 - a).Add(color.NewColor(0.5, 0.7, 1.0).Scale(a))

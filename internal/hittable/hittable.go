@@ -1,6 +1,7 @@
 package hittable
 
 import (
+	"raytracer/internal/interval"
 	"raytracer/internal/ray"
 	"raytracer/internal/vector"
 )
@@ -30,7 +31,7 @@ func (hr HitRecord) T() float64 {
 }
 
 type Hittable interface {
-	Hit(r ray.Ray, rayTmin float64, rayTmax float64, rec *HitRecord) bool
+	Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool
 }
 
 type HittableList struct {
@@ -45,13 +46,13 @@ func (hl *HittableList) Add(object Hittable) {
 	hl.objects = append(hl.objects, object)
 }
 
-func (hl HittableList) Hit(r ray.Ray, rayTmin float64, rayTmax float64, rec *HitRecord) bool {
+func (hl HittableList) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 	var tempRec HitRecord
 	hitAnything := false
-	closestSoFar := rayTmax
+	closestSoFar := rayT.Max()
 
 	for _, object := range hl.objects {
-		if object.Hit(r, rayTmin, closestSoFar, &tempRec) {
+		if object.Hit(r, interval.NewInterval(rayT.Min(), closestSoFar), &tempRec) {
 			hitAnything = true
 			closestSoFar = tempRec.t
 			*rec = tempRec

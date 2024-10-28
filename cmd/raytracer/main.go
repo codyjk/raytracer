@@ -6,13 +6,14 @@ import (
 	"os"
 	"raytracer/internal/color"
 	"raytracer/internal/hittable"
+	"raytracer/internal/interval"
 	"raytracer/internal/ray"
 	"raytracer/internal/vector"
 )
 
 func rayColor(r ray.Ray, world hittable.Hittable) color.Color {
 	var rec hittable.HitRecord
-	if world.Hit(r, 0, math.Inf(1), &rec) {
+	if world.Hit(r, interval.NewInterval(0, math.Inf(1)), &rec) {
 		// Shade the sphere with the RGB of the normal
 		return rec.Normal().Add(color.NewColor(1, 1, 1)).Scale(0.5)
 	}

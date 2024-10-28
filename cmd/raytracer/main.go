@@ -5,38 +5,19 @@ import (
 	"math"
 	"os"
 	"raytracer/internal/color"
+	"raytracer/internal/hittable"
 	"raytracer/internal/ray"
 	"raytracer/internal/vector"
 )
 
-// This math solves for the ray-sphere intersection. The math is explained here:
-// https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection
-// https://raytracing.github.io/books/RayTracingInOneWeekend.html#surfacenormalsandmultipleobjects/simplifyingtheray-sphereintersectioncode
-func hitSphere(center vector.Point3, radius float64, r ray.Ray) float64 {
-	oc := center.Sub(r.Origin())
-	a := r.Direction().LengthSquared()
-	h := vector.Dot(r.Direction(), oc)
-	c := oc.LengthSquared() - radius*radius
-	discriminant := h*h - a*c
-
-	if discriminant < 0 {
-		return -1.0
-	} else {
-		return (h - math.Sqrt(discriminant)) / a
-	}
-}
-
-// We are rendering a horizontal greadient.
-// blendedValue = (1 - a) * startValue + a * endValue, where a is the linear
-// scale of the ray direction.
-func rayColor(r ray.Ray) color.Color {
-	sphereCenter := vector.NewPoint3(0, 0, -1)
-	t := hitSphere(sphereCenter, 0.5, r)
-	if t > 0.0 {
-		N := r.At(t).Sub(sphereCenter).Unit()
-		return color.NewColor(N.X()+1, N.Y()+1, N.Z()+1).Scale(0.5)
+func rayColor(r ray.Ray, world hittable.Hittable) color.Color {
+	var rec hittable.HitRecord
+	if world.Hit(r, 0, math.Inf(1), &rec) {
+		// Shade the sphere with the RGB of the normal
+		return rec.Normal().Add(color.NewColor(1, 1, 1)).Scale(0.5)
 	}
 
+	// Gradient background
 	unitDirection := r.Direction().Unit()
 	a := 0.5 * (unitDirection.Y() + 1.0)
 	return color.NewColor(1.0, 1.0, 1.0).Scale(1.0 - a).Add(color.NewColor(0.5, 0.7, 1.0).Scale(a))
@@ -50,6 +31,11 @@ func main() {
 	if imageHeight < 1 {
 		imageHeight = 1
 	}
+
+	// World
+	world := hittable.NewHittableList()
+	world.Add(hittable.NewSphere(vector.NewPoint3(0, 0, -1), 0.5))
+	world.Add(hittable.NewSphere(vector.NewPoint3(0, -100.5, -1), 100))
 
 	// Camera
 	focalLength := 1.0
@@ -83,7 +69,7 @@ func main() {
 			rayDirection := pixelCenter.Sub(cameraCenter)
 			ray := ray.NewRay(cameraCenter, rayDirection)
 
-			pixelColor := rayColor(ray)
+			pixelColor := rayColor(ray, world)
 			color.WriteColor(os.Stdout, pixelColor)
 		}
 	}

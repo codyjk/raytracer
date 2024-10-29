@@ -3,6 +3,7 @@ package color
 import (
 	"fmt"
 	"io"
+	"raytracer/internal/interval"
 	"raytracer/internal/vector"
 )
 
@@ -18,9 +19,10 @@ func WriteColor(w io.Writer, pixelColor Color) error {
 	b := pixelColor.Z()
 
 	// Translate [0,1] to [0,255]
-	rbyte := int(255.999 * r)
-	gbyte := int(255.999 * g)
-	bbyte := int(255.999 * b)
+	intensity := interval.NewInterval(0.000, 0.999)
+	rbyte := int(256 * intensity.Clamp(r))
+	gbyte := int(256 * intensity.Clamp(g))
+	bbyte := int(256 * intensity.Clamp(b))
 
 	// Write the color components
 	_, err := fmt.Fprintf(w, "%d %d %d\n", rbyte, gbyte, bbyte)

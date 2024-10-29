@@ -8,24 +8,29 @@ import (
 	"raytracer/internal/hittable"
 	"raytracer/internal/interval"
 	"raytracer/internal/ray"
+	"raytracer/internal/util"
 	"raytracer/internal/vector"
 )
 
 type Camera struct {
-	aspectRatio float64
-	imageWidth  int
-	imageHeight int
-	center      vector.Point3
-	pixel00Loc  vector.Point3
-	pixelDeltaU vector.Vec3
-	pixelDeltaV vector.Vec3
+	aspectRatio       float64
+	imageWidth        int
+	imageHeight       int
+	center            vector.Point3
+	pixel00Loc        vector.Point3
+	pixelDeltaU       vector.Vec3
+	pixelDeltaV       vector.Vec3
+	samplesPerPixel   int
+	pixelSamplesScale float64
 }
 
-func NewCamera(aspectRatio float64, imageWidth int) Camera {
+func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int) Camera {
 	imageHeight := int(float64(imageWidth) / aspectRatio)
 	if imageHeight < 1 {
 		imageHeight = 1
 	}
+
+	pixelSamplesScale := 1.0 / float64(samplesPerPixel)
 
 	center := vector.NewPoint3(0, 0, 0)
 
@@ -58,6 +63,8 @@ func NewCamera(aspectRatio float64, imageWidth int) Camera {
 		pixel00Loc,
 		pixelDeltaU,
 		pixelDeltaV,
+		samplesPerPixel,
+		pixelSamplesScale,
 	}
 }
 
@@ -73,20 +80,38 @@ func (c Camera) rayColor(r ray.Ray, world hittable.Hittable) color.Color {
 	return color.NewColor(1.0, 1.0, 1.0).Scale(1.0 - a).Add(color.NewColor(0.5, 0.7, 1.0).Scale(a))
 }
 
+// Construct a camera ray originating from the origin and directed at randomly
+// samples point around the pixel location i, j.
+func (c Camera) getRay(i, j int) ray.Ray {
+	offset := sampleSquare()
+	pixelSample := c.pixel00Loc.Add(c.pixelDeltaU.Scale(float64(i) + offset.X())).Add(c.pixelDeltaV.Scale(float64(j) + offset.Y()))
+	rayOrigin := c.center
+	rayDirection := pixelSample.Sub(rayOrigin)
+	return ray.NewRay(rayOrigin, rayDirection)
+}
+
 func (c Camera) Render(out io.Writer, log io.Writer, world hittable.Hittable) {
 	fmt.Fprintf(out, "P3\n%d %d\n255\n", c.imageWidth, c.imageHeight)
 
 	for j := 0; j < c.imageHeight; j++ {
 		fmt.Fprintf(log, "\rScanlines remaining: %d", c.imageHeight-j)
 		for i := 0; i < c.imageWidth; i++ {
-			pixelCenter := c.pixel00Loc.Add(c.pixelDeltaU.Scale(float64(i))).Add(c.pixelDeltaV.Scale(float64(j)))
-			rayDirection := pixelCenter.Sub(c.center)
-			ray := ray.NewRay(c.center, rayDirection)
-
-			pixelColor := c.rayColor(ray, world)
-			color.WriteColor(out, pixelColor)
+			pixelColor := color.NewColor(0, 0, 0)
+			for sample := 0; sample < c.samplesPerPixel; sample++ {
+				r := c.getRay(i, j)
+				pixelColor = pixelColor.Add(c.rayColor(r, world))
+			}
+			color.WriteColor(out, pixelColor.Scale(c.pixelSamplesScale))
 		}
 	}
 
 	fmt.Fprintln(log, "\nDone.")
+}
+
+// Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+func sampleSquare() vector.Vec3 {
+	x := util.RandomFloat() - 0.5
+	y := util.RandomFloat() - 0.5
+	z := 0.0
+	return vector.NewVec3(x, y, z)
 }

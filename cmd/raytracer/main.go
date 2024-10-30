@@ -15,7 +15,8 @@ func main() {
 	aspectRatio := 16.0 / 9.0
 	imageWidth := 400
 	samplesPerPixel := 100
-	cam := camera.NewCamera(aspectRatio, imageWidth, samplesPerPixel)
+	maxDepth := 50
+	cam := camera.NewCamera(aspectRatio, imageWidth, samplesPerPixel, maxDepth)
 
 	cam.Render(os.Stdout, os.Stderr, world)
 }

@@ -101,7 +101,7 @@ func RandomFromRange(min, max float64) Vec3 {
 
 func RandomUnitVector() Vec3 {
 	for {
-		p := Random()
+		p := RandomFromRange(-1.0, 1.0)
 		lenSq := p.LengthSquared()
 		// Very small values can underflow to 0 when squared, so add a lower bound.
 		if 1e-160 < lenSq && lenSq <= 1 {

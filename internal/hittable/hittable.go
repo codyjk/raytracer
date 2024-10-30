@@ -13,6 +13,10 @@ type HitRecord struct {
 	frontFace bool
 }
 
+func (hr HitRecord) Point() vector.Point3 {
+	return hr.p
+}
+
 func (hr HitRecord) Normal() vector.Vec3 {
 	return hr.normal
 }

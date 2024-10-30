@@ -3,6 +3,7 @@ package vector
 import (
 	"fmt"
 	"math"
+	"raytracer/internal/util"
 )
 
 // Represents a 3d vector.
@@ -88,4 +89,32 @@ func Cross(u, v Vec3) Vec3 {
 		u.e[2]*v.e[0]-u.e[0]*v.e[2],
 		u.e[0]*v.e[1]-u.e[1]*v.e[0],
 	)
+}
+
+func Random() Vec3 {
+	return NewVec3(util.RandomFloat(), util.RandomFloat(), util.RandomFloat())
+}
+
+func RandomFromRange(min, max float64) Vec3 {
+	return NewVec3(util.RandomFloatFromRange(min, max), util.RandomFloatFromRange(min, max), util.RandomFloatFromRange(min, max))
+}
+
+func RandomUnitVector() Vec3 {
+	for {
+		p := Random()
+		lenSq := p.LengthSquared()
+		// Very small values can underflow to 0 when squared, so add a lower bound.
+		if 1e-160 < lenSq && lenSq <= 1 {
+			return p.Div(math.Sqrt(lenSq))
+		}
+	}
+}
+
+func RandomOnHemisphere(normal Vec3) Vec3 {
+	onUnitSphere := RandomUnitVector()
+	if Dot(onUnitSphere, normal) > 0.0 { // In the same hemisphere as the normal
+		return onUnitSphere
+	} else {
+		return onUnitSphere.Neg()
+	}
 }

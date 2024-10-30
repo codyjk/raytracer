@@ -72,7 +72,8 @@ func (c Camera) rayColor(r ray.Ray, world hittable.Hittable) color.Color {
 	var rec hittable.HitRecord
 
 	if world.Hit(r, interval.NewInterval(0, math.Inf(1)), &rec) {
-		return rec.Normal().Add(color.NewColor(1, 1, 1)).Scale(0.5)
+		direction := vector.RandomOnHemisphere(rec.Normal())
+		return c.rayColor(ray.NewRay(rec.Point(), direction), world).Scale(0.5)
 	}
 
 	unitDirection := r.Direction().Unit()

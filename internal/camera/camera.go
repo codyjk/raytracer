@@ -75,6 +75,7 @@ func (c Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) color.Co
 		// If we've exceeded the ray bounce limit, no more light is gathered.
 		return color.NewColor(0, 0, 0)
 	}
+
 	var rec hittable.HitRecord
 
 	if world.Hit(r, interval.NewInterval(0.001, math.Inf(1)), &rec) {

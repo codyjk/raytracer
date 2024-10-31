@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"raytracer/internal/color"
+	"raytracer/internal/core"
 	"raytracer/internal/hittable"
 	"raytracer/internal/interval"
 	"raytracer/internal/ray"
@@ -76,7 +77,7 @@ func (c Camera) rayColor(r ray.Ray, depth int, world hittable.Hittable) color.Co
 		return color.NewColor(0, 0, 0)
 	}
 
-	var rec hittable.HitRecord
+	var rec core.HitRecord
 
 	if world.Hit(r, interval.NewInterval(0.001, math.Inf(1)), &rec) {
 		direction := rec.Normal().Add(vector.RandomUnitVector())

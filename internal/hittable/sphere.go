@@ -2,6 +2,7 @@ package hittable
 
 import (
 	"math"
+	"raytracer/internal/core"
 	"raytracer/internal/interval"
 	"raytracer/internal/ray"
 	"raytracer/internal/vector"
@@ -27,7 +28,7 @@ func (s Sphere) Radius() float64 {
 // This math solves for the ray-sphere intersection. The math is explained here:
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html#surfacenormalsandmultipleobjects/simplifyingtheray-sphereintersectioncode
-func (s Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
+func (s Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *core.HitRecord) bool {
 	oc := s.center.Sub(r.Origin())
 	a := r.Direction().LengthSquared()
 	h := vector.Dot(r.Direction(), oc)
@@ -49,10 +50,10 @@ func (s Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *HitRecord) bool {
 		}
 	}
 
-	rec.t = root
-	rec.p = r.At(rec.t)
-	outwardNormal := rec.p.Sub(s.center).Div(s.radius)
-	rec.setFaceNormal(r, outwardNormal)
+	rec.SetT(root)
+	rec.SetPoint(r.At(rec.T()))
+	outwardNormal := rec.Point().Sub(s.center).Div(s.radius)
+	rec.SetFaceNormal(r, outwardNormal)
 
 	return true
 }

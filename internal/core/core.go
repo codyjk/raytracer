@@ -34,6 +34,10 @@ func (hr HitRecord) Material() Material {
 	return hr.mat
 }
 
+func (hr HitRecord) FrontFace() bool {
+	return hr.frontFace
+}
+
 func (hr *HitRecord) SetT(t float64) {
 	hr.t = t
 }

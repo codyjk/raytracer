@@ -134,3 +134,12 @@ func RandomOnHemisphere(normal Vec3) Vec3 {
 func Reflect(v Vec3, n Vec3) Vec3 {
 	return v.Sub(n.Scale(Dot(v, n) * 2))
 }
+
+// Calculated using Snell's law
+// https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/snell'slaw
+func Refract(uv Vec3, n Vec3, etaiOverEtat float64) Vec3 {
+	costTheta := math.Min(Dot(uv.Scale(-1), n), 1.0)
+	rOutPerp := uv.Add(n.Scale(costTheta)).Scale(etaiOverEtat)
+	rOutParallel := n.Scale(-1 * math.Sqrt(math.Abs(1.0-rOutPerp.LengthSquared())))
+	return rOutPerp.Add(rOutParallel)
+}

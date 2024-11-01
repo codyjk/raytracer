@@ -77,6 +77,11 @@ func (v Vec3) String() string {
 	return fmt.Sprintf("%v %v %v", v.e[0], v.e[1], v.e[2])
 }
 
+func (v Vec3) NearZero() bool {
+	s := 1e-8
+	return math.Abs(v.e[0]) < s && math.Abs(v.e[1]) < s && math.Abs(v.e[2]) < s
+}
+
 // Utility functions
 
 func Dot(u, v Vec3) float64 {
@@ -117,4 +122,15 @@ func RandomOnHemisphere(normal Vec3) Vec3 {
 	} else {
 		return onUnitSphere.Neg()
 	}
+}
+
+// The reflected ray direction in red is just 𝐯+2𝐛. In our design, 𝐧 is a unit
+// vector (length one), but 𝐯 may not be. To get the vector 𝐛, we scale the
+// normal vector by the length of the projection of 𝐯 onto 𝐧, which is given by the
+// dot product 𝐯⋅𝐧. (If 𝐧 were not a unit vector, we would also need to divide this
+// dot product by the length of 𝐧.) Finally, because 𝐯 points into the surface,
+// and we want 𝐛 to point out of the surface, we need to negate this projection
+// length.
+func Reflect(v Vec3, n Vec3) Vec3 {
+	return v.Sub(n.Scale(Dot(v, n) * 2))
 }

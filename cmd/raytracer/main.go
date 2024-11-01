@@ -3,14 +3,24 @@ package main
 import (
 	"os"
 	"raytracer/internal/camera"
+	"raytracer/internal/color"
 	"raytracer/internal/hittable"
+	"raytracer/internal/material"
 	"raytracer/internal/vector"
 )
 
 func main() {
 	world := hittable.NewHittableList()
-	world.Add(hittable.NewSphere(vector.NewPoint3(0, 0, -1), 0.5))
-	world.Add(hittable.NewSphere(vector.NewPoint3(0, -100.5, -1), 100))
+
+	materialGround := material.NewLambertian(color.NewColor(0.8, 0.8, 0.0))
+	materialCenter := material.NewLambertian(color.NewColor(0.1, 0.2, 0.5))
+	materialLeft := material.NewMetal(color.NewColor(0.8, 0.8, 0.8))
+	materialRight := material.NewMetal(color.NewColor(0.8, 0.6, 0.2))
+
+	world.Add(hittable.NewSphere(vector.NewPoint3(0, -100.5, -1), 100, materialGround))
+	world.Add(hittable.NewSphere(vector.NewPoint3(0, 0, -1.2), 0.5, materialCenter))
+	world.Add(hittable.NewSphere(vector.NewPoint3(-1.0, 0, -1.0), 0.5, materialLeft))
+	world.Add(hittable.NewSphere(vector.NewPoint3(1.0, 0, -1.0), 0.5, materialRight))
 
 	aspectRatio := 16.0 / 9.0
 	imageWidth := 400

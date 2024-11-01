@@ -1,6 +1,7 @@
 package core
 
 import (
+	"raytracer/internal/color"
 	"raytracer/internal/ray"
 	"raytracer/internal/vector"
 )
@@ -10,6 +11,7 @@ type HitRecord struct {
 	normal    vector.Vec3
 	t         float64
 	frontFace bool
+	mat       Material
 }
 
 func (hr HitRecord) Point() vector.Point3 {
@@ -28,6 +30,10 @@ func (hr HitRecord) T() float64 {
 	return hr.t
 }
 
+func (hr HitRecord) Material() Material {
+	return hr.mat
+}
+
 func (hr *HitRecord) SetT(t float64) {
 	hr.t = t
 }
@@ -39,4 +45,12 @@ func (hr *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal vector.Vec3) {
 	} else {
 		hr.normal = outwardNormal.Scale(-1.0)
 	}
+}
+
+func (hr *HitRecord) SetMaterial(mat Material) {
+	hr.mat = mat
+}
+
+type Material interface {
+	Scatter(rIn ray.Ray, rec *HitRecord, attenuation *color.Color, scattered *ray.Ray) bool
 }

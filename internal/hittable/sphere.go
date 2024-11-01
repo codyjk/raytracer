@@ -11,10 +11,11 @@ import (
 type Sphere struct {
 	center vector.Point3
 	radius float64
+	mat    core.Material
 }
 
-func NewSphere(center vector.Point3, radius float64) Sphere {
-	return Sphere{center, math.Max(0.0, radius)}
+func NewSphere(center vector.Point3, radius float64, mat core.Material) Sphere {
+	return Sphere{center, math.Max(0.0, radius), mat}
 }
 
 func (s Sphere) Center() vector.Point3 {
@@ -54,6 +55,7 @@ func (s Sphere) Hit(r ray.Ray, rayT interval.Interval, rec *core.HitRecord) bool
 	rec.SetPoint(r.At(rec.T()))
 	outwardNormal := rec.Point().Sub(s.center).Div(s.radius)
 	rec.SetFaceNormal(r, outwardNormal)
+	rec.SetMaterial(s.mat)
 
 	return true
 }

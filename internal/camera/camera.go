@@ -11,6 +11,8 @@ import (
 	"raytracer/internal/ray"
 	"raytracer/internal/util"
 	"raytracer/internal/vector"
+	"sync"
+	"sync/atomic"
 )
 
 // Config holds all camera configuration parameters
@@ -140,16 +142,68 @@ func (c *Camera) initialize() error {
 	return nil
 }
 
-// Render renders the scene to the provided writer
+// Scanline represents a single row of pixels
+type Scanline struct {
+	row    int
+	pixels []color.Color
+}
+
+// Render renders the scene to the provided writer using parallel processing
 func (c *Camera) Render(out io.Writer, log io.Writer, world hittable.Hittable) error {
 	if _, err := fmt.Fprintf(out, "P3\n%d %d\n255\n", c.config.ImageWidth, c.imageHeight); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
 
+	// Create a channel to receive completed scanlines
+	scanlines := make(chan Scanline, c.imageHeight)
+
+	// Create a WaitGroup to track goroutine completion
+	var wg sync.WaitGroup
+
+	// Create an atomic counter for progress tracking
+	var remaining int64 = int64(c.imageHeight)
+
+	// Start a goroutine for each scanline
 	for j := 0; j < c.imageHeight; j++ {
-		fmt.Fprintf(log, "\rScanlines remaining: %d", c.imageHeight-j)
-		if err := c.renderScanline(j, out, world); err != nil {
-			return fmt.Errorf("failed to render scanline %d: %w", j, err)
+		wg.Add(1)
+		go func(row int) {
+			defer wg.Done()
+
+			// Render the scanline
+			pixels := make([]color.Color, c.config.ImageWidth)
+			for i := 0; i < c.config.ImageWidth; i++ {
+				pixels[i] = c.samplePixel(i, row, world).Scale(c.pixelSampleScale)
+			}
+
+			// Send the completed scanline
+			scanlines <- Scanline{row: row, pixels: pixels}
+
+			// Update progress atomically
+			count := atomic.AddInt64(&remaining, -1)
+			fmt.Fprintf(log, "\rScanlines remaining: %d", count)
+		}(j)
+	}
+
+	// Start a goroutine to close the channel when all workers are done
+	go func() {
+		wg.Wait()
+		close(scanlines)
+	}()
+
+	// Create a buffer to store scanlines for ordered output
+	buffer := make([][]color.Color, c.imageHeight)
+
+	// Collect and store scanlines as they complete
+	for scanline := range scanlines {
+		buffer[scanline.row] = scanline.pixels
+	}
+
+	// Write all scanlines in order
+	for j := 0; j < c.imageHeight; j++ {
+		for _, pixel := range buffer[j] {
+			if err := color.WriteColor(out, pixel); err != nil {
+				return fmt.Errorf("failed to write pixel: %w", err)
+			}
 		}
 	}
 

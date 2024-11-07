@@ -35,6 +35,14 @@ func WriteColor(w io.Writer, pixelColor Color) error {
 	return err
 }
 
+func Random() Color {
+	return vector.Random()
+}
+
+func RandomFromRange(min, max float64) Color {
+	return vector.RandomFromRange(min, max)
+}
+
 func linearToGamma(linearComponent float64) float64 {
 	if linearComponent > 0 {
 		// We're applying "gamma 2" - 2 being the power when going from gamma to linear space.

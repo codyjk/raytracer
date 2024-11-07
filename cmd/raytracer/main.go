@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"raytracer/internal/camera"
 	"raytracer/internal/color"
@@ -25,15 +26,12 @@ func main() {
 	world.Add(hittable.NewSphere(vector.NewPoint3(-1.0, 0, -1.0), 0.4, materialBubble))
 	world.Add(hittable.NewSphere(vector.NewPoint3(1.0, 0, -1.0), 0.5, materialRight))
 
-	aspectRatio := 16.0 / 9.0
-	imageWidth := 400
-	samplesPerPixel := 100
-	maxDepth := 50
-	vFov := 20.0
-	lookFrom := vector.NewPoint3(-2, 2, 1)
-	lookAt := vector.NewPoint3(0, 0, -1)
-	vUp := vector.NewVec3(0, 1, 0)
-	cam := camera.NewCamera(aspectRatio, imageWidth, samplesPerPixel, maxDepth, vFov, lookFrom, lookAt, vUp)
+	camConfig := camera.DefaultConfig()
+	cam, err := camera.New(camConfig)
+	if err != nil {
+		fmt.Print(fmt.Errorf("failed to create camera: %w", err))
+		return
+	}
 
 	cam.Render(os.Stdout, os.Stderr, world)
 }

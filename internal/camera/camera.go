@@ -11,8 +11,8 @@ import (
 	"raytracer/internal/ray"
 	"raytracer/internal/util"
 	"raytracer/internal/vector"
+	"runtime"
 	"sync"
-	"sync/atomic"
 )
 
 // Config holds all camera configuration parameters
@@ -150,55 +150,67 @@ type Scanline struct {
 
 // Render renders the scene to the provided writer using parallel processing
 func (c *Camera) Render(out io.Writer, log io.Writer, world hittable.Hittable) error {
+	// Write header
 	if _, err := fmt.Fprintf(out, "P3\n%d %d\n255\n", c.config.ImageWidth, c.imageHeight); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
 
-	// Create a channel to receive completed scanlines
-	scanlines := make(chan Scanline, c.imageHeight)
+	// Set up worker pool size and channels
+	numWorkers := runtime.GOMAXPROCS(0)
+	jobs := make(chan int, numWorkers)
+	results := make(chan Scanline, numWorkers)
 
-	// Create a WaitGroup to track goroutine completion
+	// Create a WaitGroup for workers
 	var wg sync.WaitGroup
 
-	// Create an atomic counter for progress tracking
-	var remaining int64 = int64(c.imageHeight)
-
-	// Start a goroutine for each scanline
-	for j := 0; j < c.imageHeight; j++ {
+	// Start the worker pool
+	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go func(row int) {
+		go func() {
 			defer wg.Done()
 
-			// Render the scanline
-			pixels := make([]color.Color, c.config.ImageWidth)
-			for i := 0; i < c.config.ImageWidth; i++ {
-				pixels[i] = c.samplePixel(i, row, world).Scale(c.pixelSampleScale)
+			// Process jobs until channel is closed
+			for row := range jobs {
+				// Create scanline pixels
+				pixels := make([]color.Color, c.config.ImageWidth)
+				for i := 0; i < c.config.ImageWidth; i++ {
+					pixels[i] = c.samplePixel(i, row, world).Scale(c.pixelSampleScale)
+				}
+
+				// Send completed scanline
+				results <- Scanline{row: row, pixels: pixels}
 			}
-
-			// Send the completed scanline
-			scanlines <- Scanline{row: row, pixels: pixels}
-
-			// Update progress atomically
-			count := atomic.AddInt64(&remaining, -1)
-			fmt.Fprintf(log, "\rScanlines remaining: %d", count)
-		}(j)
+		}()
 	}
 
-	// Start a goroutine to close the channel when all workers are done
+	// Start job distribution in a separate goroutine
 	go func() {
+		// Send all row numbers as jobs
+		for j := 0; j < c.imageHeight; j++ {
+			jobs <- j
+		}
+
+		// Close jobs channel to signal no more work
+		close(jobs)
+
+		// Wait for all workers to finish
 		wg.Wait()
-		close(scanlines)
+
+		// Close results channel
+		close(results)
 	}()
 
-	// Create a buffer to store scanlines for ordered output
+	// Collect and store results
 	buffer := make([][]color.Color, c.imageHeight)
+	total := c.imageHeight
 
-	// Collect and store scanlines as they complete
-	for scanline := range scanlines {
+	for i := total; i > 0; i-- {
+		scanline := <-results
 		buffer[scanline.row] = scanline.pixels
+		fmt.Fprintf(log, "\rScanlines remaining: %d", i-1)
 	}
 
-	// Write all scanlines in order
+	// Write the results in order
 	for j := 0; j < c.imageHeight; j++ {
 		for _, pixel := range buffer[j] {
 			if err := color.WriteColor(out, pixel); err != nil {

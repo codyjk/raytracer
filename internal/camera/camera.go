@@ -25,9 +25,13 @@ type Camera struct {
 	pixelSamplesScale float64
 	maxDepth          int
 	vFov              float64
+	lookFrom          vector.Point3
+	lookAt            vector.Point3
+	vUp               vector.Vec3
+	u, v, w           vector.Vec3
 }
 
-func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDepth int, vFov float64) Camera {
+func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDepth int, vFov float64, lookFrom vector.Point3, lookAt vector.Point3, vUp vector.Vec3) Camera {
 	imageHeight := int(float64(imageWidth) / aspectRatio)
 	if imageHeight < 1 {
 		imageHeight = 1
@@ -35,29 +39,34 @@ func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDept
 
 	pixelSamplesScale := 1.0 / float64(samplesPerPixel)
 
-	center := vector.NewPoint3(0, 0, 0)
+	center := lookFrom
 
 	// Determine viewport dimensions.
-	focalLength := 1.0
+	focalLength := lookFrom.Sub(lookAt).Length()
 	theta := util.DegreesToRadians(vFov)
 	h := math.Tan(theta / 2)
 	viewportHeight := 2.0 * h * focalLength
 	viewportWidth := viewportHeight * (float64(imageWidth) / float64(imageHeight))
+
+	// Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+	w := lookFrom.Sub(lookAt).Unit()
+	u := vector.Cross(vUp, w).Unit()
+	v := vector.Cross(w, u)
 
 	// Calculate the vectors across the horizontal and down the vertical viewport edges.
 	// In our image, (0,0) represents the top left pixel. In the coordinate space
 	// of this program, it represents the bottom left. So, the directions in which
 	// the code iterates through the pictures needs to be inverted to match our
 	// mental model of the image starting in the top left.
-	viewportU := vector.NewVec3(viewportWidth, 0, 0)
-	viewportV := vector.NewVec3(0, -viewportHeight, 0)
+	viewportU := u.Scale(viewportWidth)
+	viewportV := v.Scale(-1.0 * viewportHeight)
 
 	// Calculate the horizontal and vertical delta vectors from pixel to pixel
 	pixelDeltaU := viewportU.Div(float64(imageWidth))
 	pixelDeltaV := viewportV.Div(float64(imageHeight))
 
 	// Calculate the locatino of the upper left pixel.
-	viewportUpperLeft := center.Sub(vector.NewVec3(0, 0, focalLength)).Sub(viewportU.Div(2.0)).Sub(viewportV.Div(2.0))
+	viewportUpperLeft := center.Sub(w.Scale(focalLength)).Sub(viewportU.Div(2)).Sub(viewportV.Div(2))
 	pixel00Loc := viewportUpperLeft.Add(pixelDeltaU.Add(pixelDeltaV).Scale(0.5))
 
 	return Camera{
@@ -72,6 +81,10 @@ func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDept
 		pixelSamplesScale,
 		maxDepth,
 		vFov,
+		lookFrom,
+		lookAt,
+		vUp,
+		u, v, w,
 	}
 }
 

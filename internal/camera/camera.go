@@ -24,9 +24,10 @@ type Camera struct {
 	samplesPerPixel   int
 	pixelSamplesScale float64
 	maxDepth          int
+	vFov              float64
 }
 
-func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDepth int) Camera {
+func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDepth int, vFov float64) Camera {
 	imageHeight := int(float64(imageWidth) / aspectRatio)
 	if imageHeight < 1 {
 		imageHeight = 1
@@ -38,7 +39,9 @@ func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDept
 
 	// Determine viewport dimensions.
 	focalLength := 1.0
-	viewportHeight := 2.0
+	theta := util.DegreesToRadians(vFov)
+	h := math.Tan(theta / 2)
+	viewportHeight := 2.0 * h * focalLength
 	viewportWidth := viewportHeight * (float64(imageWidth) / float64(imageHeight))
 
 	// Calculate the vectors across the horizontal and down the vertical viewport edges.
@@ -68,6 +71,7 @@ func NewCamera(aspectRatio float64, imageWidth int, samplesPerPixel int, maxDept
 		samplesPerPixel,
 		pixelSamplesScale,
 		maxDepth,
+		vFov,
 	}
 }
 

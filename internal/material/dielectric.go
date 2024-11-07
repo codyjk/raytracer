@@ -1,6 +1,7 @@
 package material
 
 import (
+	"math"
 	"raytracer/internal/color"
 	"raytracer/internal/core"
 	"raytracer/internal/ray"
@@ -24,9 +25,19 @@ func (d Dielectric) Scatter(rIn ray.Ray, rec *core.HitRecord, attenuation *color
 	}
 
 	unitDirection := rIn.Direction().Unit()
-	refracted := vector.Refract(unitDirection, rec.Normal(), ri)
+	cosTheta := math.Min(vector.Dot(unitDirection.Scale(-1.0), rec.Normal()), 1.0)
+	sinTheta := math.Sqrt(1.0 - cosTheta*cosTheta)
 
-	*scattered = ray.NewRay(rec.Point(), refracted)
+	cannotRefract := ri*sinTheta > 1.0
+	var direction vector.Vec3
+
+	if cannotRefract {
+		direction = vector.Reflect(unitDirection, rec.Normal())
+	} else {
+		direction = vector.Refract(unitDirection, rec.Normal(), ri)
+	}
+
+	*scattered = ray.NewRay(rec.Point(), direction)
 
 	return true
 }

@@ -14,7 +14,8 @@ func main() {
 
 	materialGround := material.NewLambertian(color.NewColor(0.8, 0.8, 0.0))
 	materialCenter := material.NewLambertian(color.NewColor(0.1, 0.2, 0.5))
-	materialLeft := material.NewDielectric(1.50)
+	// Models a world filled with water (refreaction index 1.33) containing a bubble of air (ri 1.00)
+	materialLeft := material.NewDielectric(1.00 / 1.33)
 	materialRight := material.NewMetal(color.NewColor(0.8, 0.6, 0.2), 1.0)
 
 	world.Add(hittable.NewSphere(vector.NewPoint3(0, -100.5, -1), 100, materialGround))

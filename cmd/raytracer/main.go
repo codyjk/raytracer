@@ -27,6 +27,8 @@ func main() {
 	world.Add(hittable.NewSphere(vector.NewPoint3(1.0, 0, -1.0), 0.5, materialRight))
 
 	camConfig := camera.DefaultConfig()
+	camConfig.DefocusAngle = 10.0
+	camConfig.FocusDist = 3.4
 	cam, err := camera.New(camConfig)
 	if err != nil {
 		fmt.Print(fmt.Errorf("failed to create camera: %w", err))

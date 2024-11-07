@@ -124,6 +124,15 @@ func RandomOnHemisphere(normal Vec3) Vec3 {
 	}
 }
 
+func RandomInUnitDisk() Vec3 {
+	for {
+		p := NewVec3(util.RandomFloatFromRange(-1, 1), util.RandomFloatFromRange(-1, 1), 0)
+		if p.LengthSquared() < 1 {
+			return p
+		}
+	}
+}
+
 // The reflected ray direction in red is just 𝐯+2𝐛. In our design, 𝐧 is a unit
 // vector (length one), but 𝐯 may not be. To get the vector 𝐛, we scale the
 // normal vector by the length of the projection of 𝐯 onto 𝐧, which is given by the

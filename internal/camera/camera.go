@@ -15,14 +15,18 @@ import (
 
 // Config holds all camera configuration parameters
 type Config struct {
-	AspectRatio     float64
-	ImageWidth      int
-	SamplesPerPixel int
-	MaxDepth        int
-	VerticalFOV     float64
-	LookFrom        vector.Point3
-	LookAt          vector.Point3
-	VUp             vector.Vec3
+	AspectRatio     float64 // Ratio of image width over height
+	ImageWidth      int     // Rendered image width in pixel count
+	SamplesPerPixel int     // Count of random samples for each pixel
+	MaxDepth        int     // Maximum number of ray bounces into scene
+
+	VerticalFOV float64       // Vertical view angle (field of view)
+	LookFrom    vector.Point3 // Point camera is looking from
+	LookAt      vector.Point3 // Point camera is looking at
+	VUp         vector.Vec3   // Camera-relative "up" direction
+
+	DefocusAngle float64 // Variation angle of rays through each pixel
+	FocusDist    float64 // Distance from camera lookFrom point to plane of perfect focus
 }
 
 // DefaultConfig returns a Config with reasonable default values
@@ -36,21 +40,26 @@ func DefaultConfig() Config {
 		LookFrom:        vector.NewPoint3(-2, 2, 1),
 		LookAt:          vector.NewPoint3(0, 0, -1),
 		VUp:             vector.NewVec3(0, 1, 0),
+		DefocusAngle:    0.0,
+		FocusDist:       10.0,
 	}
 }
 
 // Camera represents a virtual camera for ray tracing
 type Camera struct {
-	config          Config
-	imageHeight     int
-	center          vector.Point3
-	pixel00Location vector.Point3
-	pixelDeltaU     vector.Vec3
-	pixelDeltaV     vector.Vec3
-	basis           struct {
+	config           Config
+	imageHeight      int           // Rendered image height
+	pixelSampleScale float64       // Color scale factor for a sum of pixel samples
+	center           vector.Point3 // Camera center
+	pixel00Location  vector.Point3 // Offset of pixel 0,0
+	pixelDeltaU      vector.Vec3   // Offset to pixel to the right
+	pixelDeltaV      vector.Vec3   // Offset to pixel below
+	basis            struct {
+		// Camera frame basis vectors
 		u, v, w vector.Vec3
 	}
-	pixelSampleScale float64
+	defocusDiskU vector.Vec3 // Defocus disk horiztonal radius
+	defocusDiskV vector.Vec3 // Defocus disk vertical radius
 }
 
 // New creates a new Camera with the given configuration
@@ -97,10 +106,9 @@ func (c *Camera) initialize() error {
 	c.center = c.config.LookFrom
 
 	// Calculate viewport dimensions
-	focalLength := c.config.LookFrom.Sub(c.config.LookAt).Length()
 	theta := util.DegreesToRadians(c.config.VerticalFOV)
 	h := math.Tan(theta / 2)
-	viewportHeight := 2.0 * h * focalLength
+	viewportHeight := 2.0 * h * c.config.FocusDist
 	viewportWidth := viewportHeight * (float64(c.config.ImageWidth) / float64(c.imageHeight))
 
 	// Calculate camera basis vectors
@@ -119,10 +127,15 @@ func (c *Camera) initialize() error {
 
 	// Calculate upper left pixel location
 	viewportUpperLeft := c.center.
-		Sub(c.basis.w.Scale(focalLength)).
+		Sub(c.basis.w.Scale(c.config.FocusDist)).
 		Sub(viewportU.Div(2)).
 		Sub(viewportV.Div(2))
 	c.pixel00Location = viewportUpperLeft.Add(c.pixelDeltaU.Add(c.pixelDeltaV).Scale(0.5))
+
+	// Calculate the camera defocus disk basis vectors.
+	defocusRadius := c.config.FocusDist * math.Tan(util.DegreesToRadians(c.config.DefocusAngle/2))
+	c.defocusDiskU = c.basis.u.Scale(defocusRadius)
+	c.defocusDiskV = c.basis.v.Scale(defocusRadius)
 
 	return nil
 }
@@ -174,8 +187,12 @@ func (c *Camera) getRay(i, j int) ray.Ray {
 		Add(c.pixelDeltaU.Scale(offset.X())).
 		Add(c.pixelDeltaV.Scale(offset.Y()))
 
-	rayDirection := pixelSample.Sub(c.center)
-	return ray.NewRay(c.center, rayDirection)
+	rayOrigin := c.center
+	if c.config.DefocusAngle > 0 {
+		rayOrigin = c.defocusDiskSample()
+	}
+	rayDirection := pixelSample.Sub(rayOrigin)
+	return ray.NewRay(rayOrigin, rayDirection)
 }
 
 func (c *Camera) traceRay(r ray.Ray, depth int, world hittable.Hittable) color.Color {
@@ -197,6 +214,14 @@ func (c *Camera) traceRay(r ray.Ray, depth int, world hittable.Hittable) color.C
 	unitDirection := r.Direction().Unit()
 	t := 0.5 * (unitDirection.Y() + 1.0)
 	return color.NewColor(1.0, 1.0, 1.0).Scale(1.0 - t).Add(color.NewColor(0.5, 0.7, 1.0).Scale(t))
+}
+
+func (c Camera) defocusDiskSample() vector.Point3 {
+	// Returns a random point in the camera defocus disk.
+	p := vector.RandomInUnitDisk()
+	return c.center.
+		Add(c.defocusDiskU.Scale(p.X())).
+		Add(c.defocusDiskV.Scale(p.Y()))
 }
 
 // samplePixelSquare returns a random point in the [-0.5,0.5] square
